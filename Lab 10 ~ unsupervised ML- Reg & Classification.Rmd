@@ -1,0 +1,632 @@
+---
+title: 'Lab 10: Supervised Machine Learning: Regression and Classification'
+author: "DOAgoons"
+date: "2023-04-06"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# *Lab Overview*
+
+## **Technical Learning Objectives**
+- Understanding how to build, specify, fit, and evaluate regression models based on text, including support vector machines (SVM) and
+regularized linear models in glmnet.
+- Understand how to build and evaluate classification models based on text.
+- Understand how to build and use a *textrecipe* and a workflow.
+- Develop an initial understanding of developing and using k-nearest neighbor (*KNN*) groupings.
+- Introduction to commercial automated machine learning platforms such as DataRobot.
+
+## **Business Learning Objectives**
+- Understand the differences between regression models and classification models and when to use either. The main difference has to do with the datatype of the outcome variable (*Use regression when outcome variable is continuous and classification when it is categorical*)
+- Deepen your understanding of when to use supervised machine learning in relation to unsupervised machine learning.
+- Understand how to evaluate your models and the performance estimates of your models.
+- Understand how to interpret output from various regression and classification modeling approaches.
+- Understand the value of textrecipes and workflows to automate your work
+- Understand potential bias in AI/ML.
+
+
+ENsure working directory is set where it has to be
+```{r}
+getwd()
+```
+
+# **Assignment Overview**
+In this lab we introduce the final *deductive approaches* we will consider in this course, supervised machine learning, particularly *regression* and *classification*, as well as k-nearest neighbor groupings.  These techniques will use *tidymodels*, *textrecipes*, *workflows*, *descrim*, *mltools*, and *naivebayes* packages. 
+
+using data from the Supreme Court of the United States (SCOTUS), US Consumer Finance Protection Bureau, and a movie review dataset from
+quanteda.textmodels.
+
+There are two main parts to the lab:
+- **Part 1: Regression Modeling:** This part will guide you through a basic understanding of predictive analytics through regression
+modeling, which is designed to predict continuous outcome variables. We will be using text data from the US Supreme Court called the
+scotus dataset (*installed from a remote GitHub site*). We will be using a support vector machine (SVM) model for prediction.
+
+- **Part 2: Classification Modelling:** This part of the lab focuses on modeling to predicting if new data belongs to a specific
+“class” or group. This approach to predictive analytics is called classification modeling. Data for this part of the lab comes from the
+US Consumer Finance Protection Bureau called complaints.csv. It will use a *Naïve Bayes* classification algorithm and *lasso model*.
+
+# Optional Pre-Lab Instructions (please review before class or viewing the recording)  
+
+To submit a pdf, install *tinytex* (which will install the required LaTex infrastructure). Once
+the package is installed, tinytex itself needs to be installed in order to finalize your ability to knit to a pdf. Just a heads up, it
+installs quite a bit of related material.
+```{r}
+# install.packages("tinytex")
+#library(tinytex)
+
+# Once the tinytex library is loaded, you now need to install tinytex 
+# install_tinytex()
+```
+
+For *Part 1* dataset, US SCOTUS, install the scotus package from a GitHub repository, which must be installed using the remotes package. So first, install the remotes package. Then install the scotus package from GitHub. 
+
+```{r}
+# install.packages("remotes")
+library(remotes)
+
+# Once the remotes package is installed, you now need to install scotus package
+remotes::install_github("EmilHvitfeldt/scotus")
+```
+
+Now, install any of the required packages that may be new for you:
+```{r}
+# install.packages("tidymodels") # use to split data into train and test sets
+# install.packages("textrecipes") # used for preprocessing of corpus
+# install.packages("discrim")
+# install.packages("naivebayes")
+# install.packages("quanteda.textmodels")
+# install.packages("caret")
+# install.packages("ranger")
+# install.packages("rsample")
+# install.packages("recipes")
+# install.packages("textrecipes")
+# install.packages("workflows"). # used for preprocessing of corpus
+# install.packages("parsnip")
+# install.packages("tune")
+# install.packages("yardstick")
+# install.packages("dials")
+```
+
+Load the packages
+```{r}
+library(scotus)
+library(tidymodels)
+library(textrecipes)
+library(naivebayes)
+library(caret)
+library(ranger)
+library(rsample)
+library(recipes)
+library(textrecipes)
+library(workflows)
+library(parsnip)
+library(discrim)
+library(tune)
+library(yardstick)
+library(dials)
+library(tidyverse)
+```
+
+# **Part 1: Regression Modeling:** 
+## Preparing the SCOTUS Data
+
+To begin, let's read in the data from the scotus package. 
+
+This dataset, called *scotus_filtered*, contains *a sample of opinions from the Supreme Court United States (SCOTUS)*. Once the data is loaded, 
+- Examine the data, noticing the variables, their names and characteristics. 
+- The text column contains the entire text of each opinion, along with the case_name and docket_number. The year variable is the specific year that each case was decided by the Supreme Court. *This "year" variable is a continuous variable that allows us to build a regression model to predict which court opinions were written in which years*, rather than a classification model (which would be predicting a class).
+
+```{r load scotus data}
+scotus_filtered %>%
+as_tibble()
+
+glimpse(scotus_filtered)
+```
+
+*Exploratory data analysis*
+
+Before we begin building our regression model, let's create and plot a decade variable to see how many cases are in the dataset for each decade. *What do we notice about the distribution of cases in the dataset?* What impact might that have on our analysis? *Could this be an example of bias in our dataset?*
+
+
+```{r plot decades in scotus}
+scotus_filtered %>%
+  mutate(year = as.numeric(year),
+         year = 10 * (year %/% 10)) %>%
+  count(year) %>%
+  ggplot(aes(year, n))+
+  geom_col() +
+  labs(x="Year", y="Number of opinions per decade")
+```
+
+## Building a Predictive Regression Model 
+We will now begin to build our first regression model. 
+
+We will split our data into training and testing sets using functions from the
+tidymodels package. We will again set our seed to enable predictability. Year will need to be converted to a numeric value (since it was originally stored as a character). We are using *str_remove_all* to remove the ' character because of its effect on some of the ML models.
+
+```{r build regression model}
+set.seed(1234)
+scotus_split <- scotus_filtered %>%
+  mutate(year=as.numeric(year),
+         text=str_remove_all(text,"'")) %>%
+  initial_split()
+
+scotus_train <- training(scotus_split)
+scotus_test <- testing(scotus_split)
+```
+
+## Exploring Text Recipes and Workflows
+Now we will do some data preprocessing. To do so, we will take advantage of the textrecipes and workflows packages. Let's create a recipe to prepare our scotus data. You will see each of the text preprocessing steps we want to use are included in the recipe.
+
+```{r create scotus recipe}
+scotus_rec <- recipe(year ~ text, data = scotus_train) %>%
+  step_tokenize(text) %>%
+  step_tokenfilter(text, max_tokens = 1e3) %>%
+  step_tfidf(text) %>%
+  step_normalize(all_predictors())
+scotus_rec 
+```
+
+Now we will prep the recipe and then bake it, meaning it will use the
+*prep()* function to estimate all the necessary parameters for each 
+step using the training data and  then  *bake()* it to apply the steps
+to data (in this case to the training data using new_data=NULL)
+
+# This code takes a long time to run
+```{r}
+scotus_prep <- prep(scotus_rec)
+scotus_bake <- bake(scotus_prep, new_data=NULL)
+dim(scotus_bake)
+```
+
+
+Now we can start  to build up a workflow for the scotus data analysis. 什么意思？
+```{r build scotus workflow}
+scotus_wf <- workflow() %>%
+  add_recipe(scotus_rec)
+scotus_wf
+```
+
+From this output, you will see there a model is not yet specified.
+Let's add one now. In this case we want to use an *SVM model*. We are
+telling *r* that our mode is regression  (rather than classification), and
+*our engine will be LiblineaR* which results in a linear svm.
+
+```{r specify the svm model}
+svm_spec <- svm_linear() %>%
+  set_mode("regression") %>%
+  set_engine("LiblineaR")
+```
+
+
+Now it is time to fit our model to the data. [Some of these model
+fitting steps take some time, and when using Rmd for your work, you
+may have a specific code chunk "depend-on"  another specific code
+chunk. That way a code chunk may rely on the output of another code
+chunk without re-running the code (assuming nothing has changed).
+
+# code takes a lil while to run
+```{r fit our svm model to data}
+svm_fit <- scotus_wf %>%
+  add_model(svm_spec) %>%
+  fit(data = scotus_train)
+```
+
+Now that we have fit the model, let's look at the results.
+```{r svm fit results}
+svm_fit %>%
+  extract_fit_parsnip() %>%
+  tidy() %>%
+  arrange(-estimate)
+```
+
+## Evaluating the Model
+
+Let's look at the words.
+```{r test words}
+test_words1 <-
+  svm_fit %>%
+  extract_fit_parsnip() %>%
+  tidy() %>%
+  slice_max(estimate, n = 10) %>%
+  mutate(term = str_remove(term, "tfidf_text_")) %>%
+  pull(term)
+test_words1
+```
+
+From this output, we can get a sense of the words most likely to
+contribute to a Supreme Court case in 1920, and in each of the other
+years.
+
+```{r test words2}
+svm_fit %>%
+  extract_fit_parsnip() %>%
+  tidy() %>%
+  arrange(estimate)
+test_words2 <-
+  svm_fit %>%
+  extract_fit_parsnip() %>%
+  tidy() %>%
+  slice_max(-estimate, n = 10) %>%
+  mutate(term = str_remove(term, "tfidf_text_")) %>%
+  pull(term)
+test_words2
+```
+
+There are new words in this collection, such as "ought" and 
+"therefore". So now, let's create 10-fold cross-validation sets and
+get new performance estimates from these resampled sets.
+
+# Cross validation step takes time to run
+```{r estimate new svm}
+set.seed(123)
+scotus_folds <- vfold_cv(scotus_train)
+scotus_folds
+```
+Now, we will estimate how well the model performs on the training
+data.
+
+### this code takes time to run (about 30 minutes)
+```{r model estimate}
+set.seed(123)
+svm_rs <- fit_resamples(
+  scotus_wf %>% add_model(svm_spec),
+  scotus_folds,
+  control = control_resamples(save_pred = TRUE)
+) 
+
+svm_rs
+
+collect_metrics(svm_rs)
+```
+
+First attempt at rmse
+```{r rsme estimates}
+first_attemp_rmse <- collect_metrics(svm_rs) %>%
+  filter(.metric == "rmse") %>%
+  pull(mean) %>%
+  round(1)
+```
+
+These values are quantitative estimates for how well our model
+performed, and can be compared across difference kinds of models.
+```{r comparing across metrics}
+svm_rs %>%
+  collect_predictions() %>%
+  ggplot(aes(year, .pred, color = id)) +
+  geom_abline(lty = 2, color = "gray80", size = 1.5) +
+  geom_point(alpha = 0.3) +
+  labs(
+    x = "Truth",
+    y = "Predicted year",
+    color = NULL,
+    title = "Predicted and true years for Supreme Court opinions",
+    subtitle = "Each cross-validation fold is shown in a different
+color" )
+```
+
+
+From this plot we can see the results of our model across all ten
+folds.
+We can also compare our model to a "null model".
+
+Code takes time to run ~ 
+```{r compared to null model}
+null_regression <- null_model() %>%
+    set_engine("parsnip") %>%
+  set_mode("regression")
+null_rs <- fit_resamples(
+  scotus_wf %>% add_model(null_regression),
+  scotus_folds,
+  metrics = metric_set(rmse)
+) 
+
+null_rs
+
+collect_metrics(null_rs)
+```
+
+#**Part 2: Classification Modelling:** Now we move on to Part 2 of
+the lab. Here, we will focus on predicting if new data belongs to a
+specific “class” or group. Data for this part of the lab comes from
+the US Consumer Finance Protection Bureau called complaints.csv.
+Let's begin by using the read_csv() to bring in a compressed csv file
+(complaints.csv.gz) and save it in an object called "complaints". We
+will then review an overview of the dataset through glimpse, head,
+and tail.
+
+## Preparing the Complaints Data
+```{r read in complaint data}
+complaints <- read_csv("complaints.csv")
+```
+# Exploratory data analysis
+```{r}
+library(DataExplorer)
+create_report(complaints)
+
+anyNA(complaints)
+glimpse(complaints)
+summary(complaints)
+
+# Examine the text component of the dataset 
+# head(complaints$consumer_complaint_narrative)
+# tail(complaints$consumer_complaint_narrative)
+```
+
+
+Let's now clean up the complaints dataset by using a regex to remove
+the dollar amounts from the dataset.
+```{r cleaning up complaints dataset}
+complaints$consumer_complaint_narrative %>%
+  str_extract_all("\\{\\$[0-9\\.]*\\}") %>%
+  compact() %>% 
+  head() 
+```
+
+
+## Creating a Two-Class Model and Splitting Data
+Now we will create a factor that allows us to look at credit and
+other options. 
+
+```{r create complaint factor}
+set.seed(1234)
+complaints2class <- complaints %>%
+  mutate(product = factor(if_else(
+    product == paste("Credit reporting, credit repair services,",
+                     "or other personal consumer reports"),
+    "Credit", "Other"
+  )))
+complaints_split <- initial_split(complaints2class, strata = product)
+complaints_train <- training(complaints_split)
+complaints_test <- testing(complaints_split)
+```
+
+Now, let's look at the dimensions of the complaints training and
+testing sets.
+```{r dim complaint train and test}
+dim(complaints_train)
+dim(complaints_test)
+```
+
+## Creating a Complaints Recipe and Workflow
+Now create a recipe for this model.
+```{r recipe for complaints}
+complaints_rec <-
+  recipe(product ~ consumer_complaint_narrative, data =
+complaints_train)
+```
+
+Now, let's preprocess the text of the complaints dataset.
+```{r preprocessing complaints}
+complaints_rec <- complaints_rec %>%
+  step_tokenize(consumer_complaint_narrative) %>%
+  step_tokenfilter(consumer_complaint_narrative, max_tokens = 1e3) %>% 
+  step_tfidf(consumer_complaint_narrative)
+```
+
+Let's now build up the workflow components.
+```{r complaints workflow}
+complaint_wf <- workflow() %>%
+  add_recipe(complaints_rec)
+```
+
+
+For a model, we will use a naive Bayes model, which is available from
+the discrim package. A naive Bayes model has an advantage in that it
+handles a large number of features well.
+```{r naive Bayes}
+nb_spec <- naive_Bayes() %>%
+  set_mode("classification") %>%
+  set_engine("naivebayes")
+nb_spec
+nb_fit <- complaint_wf %>%
+  add_model(nb_spec) %>%
+  fit(data = complaints_train)
+```
+
+Developing the folds from the complaint dataset.
+```{r folds for complaints}
+set.seed(234)
+complaints_folds <- vfold_cv(complaints_train)
+complaints_folds
+```
+Now we will develop a workflow for the complaints dataset.
+```{r workflow for complaints}
+nb_wf <- workflow() %>%
+  add_recipe(complaints_rec) %>%
+  add_model(nb_spec)
+nb_wf 
+```
+~ Takes time to run
+## Evaluating the Naive Bayes Model
+Now let's estimate how well the model performs on the resampled data.
+```{r fit resamples}
+nb_rs <- fit_resamples(
+  nb_wf,
+  complaints_folds,
+    control = control_resamples(save_pred = TRUE)
+)
+```
+
+Now let's pull the metrics
+```{r pull the metrics}
+nb_rs_metrics <- collect_metrics(nb_rs)
+nb_rs_predictions <- collect_predictions(nb_rs)
+nb_rs_metrics
+```
+Now showing the visualization of the evaluation
+```{r visualization of the evaluation}
+nb_rs_predictions %>%
+  group_by(id) %>%
+  roc_curve(truth = product, .pred_Credit) %>%
+  autoplot() +
+  labs(
+    color = NULL,
+    title = "ROC curve for US Consumer Finance Complaints",
+    subtitle = "Each resample fold is shown in a different color"
+) 
+```
+
+We will now plot a confusion matrix and visualize with a heatmap.
+```{r heatmap}
+conf_mat_resampled(nb_rs, tidy = FALSE) %>%
+  autoplot(type = "heatmap")
+```
+```{r comare nb to null}
+null_classification <- null_model() %>%
+  set_engine("parsnip") %>%
+  set_mode("classification")
+null_rs <- workflow() %>%
+  add_recipe(complaints_rec) %>%
+  add_model(null_classification) %>%
+  fit_resamples(
+    complaints_folds
+  )
+null_rs %>%
+  collect_metrics()
+```
+
+## Exploring a Lasso Model
+Now, let's consider a different ML model called a Lasso model. Lasso
+is a regularized model (it can be used for both regression and
+classification problems). The "regularization method" of Lasso
+performs variable selection. In text analysis, our tokenized text
+will be the key features in our machine learning problem.
+Let's begin by specifying a Lasso regularized model
+```{r specify a lasso model}
+lasso_spec <- logistic_reg(penalty = 0.01, mixture = 1) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+lasso_spec
+```
+Now, we will create a workflow for our Lasso analysis, adding in our
+complaints_rec recipe.
+```{r add workflow to lasso}
+lasso_wf <- workflow() %>%
+  add_recipe(complaints_rec) %>%
+  add_model(lasso_spec)
+lasso_wf 
+```
+~ takes time to rest
+Fit the Lasso model to the resampled folds from the training data.
+```{r fit lasso model}
+set.seed(2020)
+lasso_rs <- fit_resamples(
+  lasso_wf,
+  complaints_folds,
+  control = control_resamples(save_pred = TRUE)
+) 
+```
+
+Pull and review the Lasso metrics.
+```{r lasso metrics}
+lasso_rs_metrics <- collect_metrics(lasso_rs)
+lasso_rs_predictions <- collect_predictions(lasso_rs)
+lasso_rs_metrics
+lasso_rs_predictions %>%
+  group_by(id) %>%
+  roc_curve(truth = product, .pred_Credit) %>%
+  autoplot() +
+  labs(
+    color = NULL,
+    title = "ROC curve for US Consumer Finance Complaints",
+    subtitle = "Each resample fold is shown in a different color"
+) 
+```
+Now generate a confusion matrix and visualize with a heatmap.
+```{r confusion matrix}
+conf_mat_resampled(lasso_rs, tidy = FALSE) %>%
+  autoplot(type = "heatmap")
+```
+## Tuning Model Hyperparameters
+The next step is to tune the Lasso hyperparameters. In a ML model,
+hyperparameters can be set automatically (as they were above) or
+tuned by the user. In this case, the value of penalty = 0.01 was
+chosen arbitrarily. That  value is one of the hyperparameters of the
+model. You may experiment with adjusting these hyperparameters to
+learn how the models perform before ultimately settling on those you
+want to use.
+
+Let's now tune the hyperparameters for the Lasso model.
+```{r tune lasso}
+tune_spec <- logistic_reg(penalty = tune(), mixture = 1) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+tune_spec
+```
+Select the best numeric value to use in our hyperparameter.
+```{r lambda grid}
+lambda_grid <- grid_regular(penalty(), levels = 30)
+lambda_grid
+```
+
+Create a workflow for the tuned Lasso analysis.
+```{r lasso workflow}
+tune_wf <- workflow() %>%
+  add_recipe(complaints_rec) %>%
+  add_model(tune_spec)
+```
+Fit the tuned model to every possible parameter in the lambda_grid
+and every resample in complaints_folds.
+```{r fit lasso}
+set.seed(2020)
+tune_rs <- tune_grid(
+  tune_wf,
+  complaints_folds,
+  grid = lambda_grid,
+  control = control_resamples(save_pred = TRUE)
+)
+tune_rs 
+```
+
+## Evaluating the Lasso Model
+Review and plot metrics from the Lasso analysis.
+```{r review lasso metrics}
+collect_metrics(tune_rs)
+autoplot(tune_rs) +
+  labs(
+    title = "Lasso model performance across regularization
+penalties",
+    subtitle = "Performance metrics can be used to identity the best
+penalty"
+) 
+```
+
+Now visualize with the show_best() function.
+```{r showbest and review metrics}
+tune_rs %>%
+  show_best("roc_auc")
+tune_rs_auc <- show_best(tune_rs, "roc_auc") %>%
+  pull(mean) %>%
+  max() %>%
+  round(3)
+```
+
+
+```{r best parameter}
+chosen_auc <- tune_rs %>%
+  select_by_one_std_err(metric = "roc_auc", -penalty)
+chosen_auc
+```
+Now let's finalize our fully tuned Lasso analysis.
+```{r finalize lasso}
+final_lasso <- finalize_workflow(tune_wf, chosen_auc)
+final_lasso
+fitted_lasso <- fit(final_lasso, complaints_train)
+fitted_lasso %>%
+  extract_fit_parsnip() %>%
+  tidy() %>%
+  arrange(-estimate)
+fitted_lasso %>%
+  extract_fit_parsnip() %>%
+  tidy() %>%
+  arrange(estimate)
+```
+
+
