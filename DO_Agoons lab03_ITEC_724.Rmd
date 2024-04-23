@@ -1,0 +1,396 @@
+---
+title: "Lab3: Data Collection, importation and Regex and Web_scrapping ITEC 724"
+author: "DOAgoons"
+date: "2023-02-11"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+                        Lab 3: Data Collection, Importing, Regex, and Web Scraping
+
+## This lab will
+
+## i) explore techniques that allow the importation of text data of various file types both unstructured and structured
+
+## ii) explore data collection via web scraping. There are three main parts to this lab:
+
+## DATA IMPORTING
+
+## • Part 1, will help you to understand the wide variety file types that may be imported into R using the getReaders() function (e.g. plain, doc, pdf, etc.) contained in the *tm package*, and the tm plugin to explore email datasets. You may use these techniques to import your own dataset and practice.
+
+# DATA SCAPPING
+
+## • Part 2, will introduce some detail on writing *regular expressions* (Regex), and how to find fields used in Cascading Style Sheets (CSS) which will facilitate your web scraping and data parsing efforts.
+
+## • Part 3, will explore webscraping in a progressively complicated series of R packages. We will begin with XML2, then on to rvest, part of the tidyverse, and relatively easy to use.
+
+## NB: "echo=TRUE", will show your work (code output and plots)
+
+We will look at two data files for this lab: impeach.tab (which is a tab delimited file of impeachment transcripts) and a folder called txt_data (which is a folder containing individual transcripts from the UN Internet Governance Forum in Bali, all saved in the .txt format).
+
+## Installing Packages, Importing and Exploring Data
+
+```{r}
+#install.packages("rvest")
+#install.packages("readr")
+#install.packages("tm.plugin.mail")
+#install.packages("Rcrawler")
+#install.packages("RSelenium")
+#install.packages("dplyr") 
+#install.packages("xml2")
+#install.packages("tidyverse")
+#install.packages("tidytext")
+
+library(rvest)
+library(readr)
+library(tm.plugin.mail)
+library(Rcrawler)
+library(RSelenium)
+library(dplyr)
+library(xml2)
+library(tidyverse)
+library(tidytext)
+library(tm)
+
+### If need be, you may want to load the following libraries: 
+
+# install.packages("knitr")
+#install.packages("tinytex")
+#install.packages("stringi")
+#install.packages("stringr")
+#install.packages("qdap")
+#install.packages("rJava")
+#install.packages("ggthemes")
+#install.packages("gutenbergr")
+#install.packages("janeaustenr")
+#install.packages("tm")
+#install.packages("tidyr")
+#install.packages("ggplot2")
+#install.packages("scales")
+
+### Load libraries 
+#library(scales)
+#library(knitr)
+#library(tinytex)
+#library(stringi) 
+#library(stringr)
+#library(qdap)
+#library(rJava)
+#library(ggthemes)
+#library(gutenbergr)
+#library(janeaustenr)
+#library(tm)
+#library(tidyr)
+#library(ggplot2)
+
+### Remember, there are eight core Tidyverse packages namely ggplot2, dplyr, tidyr, readr, purrr, tibble, stringr, and forcats. All of these packages are loaded automatically at once with the install.packages(“tidyverse”) command and the library(tidyverse) command.
+```
+
+### now, we make use of *SelectorGadget*. *SelectorGadget* is a JavaScript bookmarklet that allows you to interactively figure out what css selector you need to extract desired components from a page.
+
+### to add the SelectorGadget to chrome brower, open this link <https://rvest.tidyverse.org/articles/selectorgadget.html>
+
+### DO shift+command+B to see all bookmarks on your browser. Drag SelectorGadget from the above link to the bookmark window an thats it.
+
+### Remember, we need SelectorGadget to figure out what the css selector. Once you've opened the webpage you're interested in scrapping, hit the SelectorGadget which is bookmarked on your browswer.
+
+### Anything under the mouse after SelectorGadget has been clicked in the bookmark will appear in an orange colored rectangular box. Click on the element you want to select; it may be a paragraph, title of a text or the whole document. SelectorGadget will make a first guess at what *css* selector you want. Elements that match the selector will be highlighted in yellow.
+
+## Part 1: Importing Data
+
+### There are a wide variety of file types (e.g. plain, doc, pdf, etc.) that may be imported into R using the getReaders() function in the tm package.
+
+### The tm package also has a plugin (tm.plugin.mail) to facilitate analysis of email archives. Explore this.
+
+### Deliverable 1: Review the file types that may be imported into R using the getReaders() function in the tm package.
+
+```{r}
+getReaders()
+
+### Note that, you can down have the following ten types of documents with the following extensions in a folder and getReaders() will import them. If you had say a dataframe, word, or pdf document, you would use the functions corresponding the output below. 
+```
+
+### Now, indicate which of the tm functions you would use to import the following types of documents?:
+
+
+### Deliverable 2: Getting and Setting Working Directory
+```{r}
+# Use the function getwd() to identify your working directory or where your data is stored. 
+# You still could set this up manually by importing your data. 
+getwd()
+
+### Now, setup your working directory 
+setwd("/Users/apple/Documents/MS Analytics ~ 2023/Semester 1 ~ Spring 2023/ITEC 724 ~ Big Data Analytics & Text Mining/LABS/LAB 3")
+
+```
+
+### Deliverable 3: Importing Tab Delimited Files: Prepare Trump Impeachment Object
+
+### For this part of the lab, we are using a dataset collected from the public transcripts of witnesses testifying in front of the US House of Representatives in late 2019 as part of the first impeachment inquiry of President Donald J. Trump. This is a text dataset saved as a tab delimited file, also known as tab separated values (tsv).
+
+```{r}
+### Importing text data. 
+### If you use the "read.delim()" to import text data, you will need to tell R not to convert the strings to factors. The function "read_tsv()" from "readr" will not by default. In 4 the read.delim function, you will need to include the argument stringsAsFactors = FALSE. 
+
+### Method one to import .tsv data
+### trump1 = read.delim("impeach.tab", stringsAsFactors = FALSE)
+
+### Method 2 to import .tsv data
+trump1 = read_tsv("impeach.tab")
+
+class(trump1)
+
+### The output tells us that it is a data frame and that it is also a tibble, This is the added advantage of working in tidyverse. 
+```
+
+### Description of data.
+
+### this dataset is a collection of publicly available transcripts from the hearings related to the impeachment inquiry of U.S. President Donald J. Trump in the last months of 2019. This data has been collected into a tab delimited file called impeach.tab. It contains 10,987 observations of 5 variables: 1: HEARING (which is the date of the hearing); 2: SPEAKER (the Congressperson asking the question); 3: MAIN.SPEAKER (name of the witness); 4: Role (role played in the hearing, e.g. Democrat, Republican, Lawyer, Lawyer-D, Lawyer-R, or Witness-Name, e.g. W-Kent); and (5) TEXT (the text of the specific intervention from the transcript, given the turn-taking nature of the hearing).
+
+### Deliverable 4: Import and Inspect a Folder of .txt files Using TM: IGF Bali Transcripts
+
+```{r}
+### We're gonna use the tm-package to import this dataset because we need to create a term document matrix (TDM). 
+### This dataset contains plain text reason why *reader=readPlain*. This argument would be flexible based on the  the data 
+
+### Remember that a corpus is a collection of written text, just the ones being imported
+
+igfbali = Corpus(DirSource('txt_data'), readerControl = list(reader=readPlain))
+
+### This corpus contains 63 documents
+igfbali
+
+### we inspect the first document in the corpus
+#inspect(igfbali[1])
+
+
+class(igfbali)
+
+
+summary(igfbali[1])
+
+#inspect(igfbali[1:2])
+#summary(igfbali[1:2])
+```
+
+## Part 2: Regular Expressions (Regex)
+
+### This part of the lab will introduce you to writing Regular Expressions (Regex). You will find regex extremely helpful across a wide range of tasks in data analytics including data collection, webscraping, and data manipulation. This part will also show you how to find fields used in Cascading Style Sheets (CSS) which will also facilitate your webscraping and data parsing efforts.
+
+### The most basic regex consists of only a single character. Here, we will use the stringr package to detect the following strings in a character vector we create called animals which contain the letter "j". NB: Remember the stringr package was loaded when you loaded the tidyverse.
+
+### Deliverable 5: Create Objects Containing a Vector of Characters and Explore
+
+```{r}
+### We will ask R to "detect/find" the letter "J" within the object "animals"
+
+### Create an object vector “animals” containing a vector of three items: jaguar, jay, and bat. Thus, this vector would be our corpus and the individual animals likened to documents in this example. 
+
+animals = c("jaguar", "jay", "bat")
+
+
+### use the string detect function - str_detect() to detect the letter “j” within that vector. We are asking R to find the letter “j” *anywhere* within the object animals.   # ?str_detect
+str_detect(animals,"j", negate = FALSE)
+```
+
+```{r}
+
+str_extract(animals, "j") 
+
+### We can also locate the position of the match using the string locate function - str_locate.
+
+str_locate(animals, "j")
+### This tells us that, the character or string or pattern, "j" to be located was located in the first position of the document "jaguar" and end in the first position. 
+
+### Let’s now match multiple characters in a row, are the letters “jag” in the animals object?
+str_locate(animals,"jag")
+
+### The pattern "jag" is found in the first document only. It starts in the first character and ends in the third. 
+
+### Now, we create a new corpus called "animals1", detect the character "w" and locate it within the corpus. The character "w" is was detected and located in the first document in the first position. 
+animals1= c("wow", "WoW", "WOW")
+str_detect(animals1, "w")
+str_locate(animals1,"w")
+
+### After this piece of code, I tried knitting the document into a pdf and the process returned an error message [! TeX capacity exceeded, sorry [main memory size=5000000].  ->\leavevmode \nobreak \ Error: LaTeX failed to compile DO_Agoons-lab03_ITEC_724.tex"]. To debug it, we used the code below found on https://yihui.org/tinytex/r/#debugging 
+#update.packages(ask = FALSE, checkBuilt = TRUE)
+#tinytex::tlmgr_update()
+```
+
+### Deliverable 6: Understanding and Using the Regex Meta Characters
+
+```{r}
+### Remember, the 14 Meta Characters have special meaning in regex and must be “escaped” with a \ (double backslash) to strip them of their special meaning and treat them as literal characters. This is useful when you want to match a string that contains a meta character, but you don't want the meaning to apply. Let’s do a brief example of this with the plus symbol “+” below. 
+
+### Create an object called math, containing “1+2”, “14+5,”3-5”
+math = c("1+2", "14+5", "3-5")
+math
+
+### First, let’s try to detect the plus symbol without escaping it. You should expect an error message.
+### str_detect(math,"+") ~ this returns an error
+
+str_detect(math,"\\+")
+
+
+### The period “.” acts as a wildcard within regex, meaning it will match almost anything in its place. 
+### Let’s take a look by creating an object called strings, and add cat, cut, and cue. 
+### Then extract any strings that begin with the letter “c” and anything else. To represent "anything else", add "." in front of the character "c" --> "c."
+
+strings = c("cat", "cut", "cue")
+str_extract(strings, "c.")
+
+
+### extract any strings that begin with the letter “c” , end in “t” with anything else in between. => "c.t"
+str_extract(strings, "c.t")
+
+
+### Constructed within [square brackets] character classes allow us to match a character specified inside the class. Let’s practice by creating a character class/set [ac] which will match either an “a” or a “c”.
+
+strings2 = c("a", "b", "c")
+str_detect(strings2,"[ac]")  # this [ac] character will search through our document word by word. If any word in our document contains either the letter "a" or "c", R will return "TRUE" as output for the search. 
+
+
+```
+
+### Note that Spaces matter and will be interpreted literally; and a hyphen, "-", will define a range of characters. so [1-5] is the same as [12345]. Let's test this.
+
+```{r}
+### Create an object called numbers containing the numbers 1-9, then use the hyphen and the str_detect() to identify the numbers 2-7.
+### numbers = c("1:9") ~ this understanding is wrong. It needs to be strings. 
+### str_detect(numbers,"2:7") NOTE THAT THIS IS WRONG. 
+
+numbers = c("1", "2", "3", "4", "5", "6", "7", "8", "9")
+str_detect(numbers, "2-7")
+```
+
+### Create an object called "sentence" containing the following string: "This is a long sentence with 2 numbers with 1 digits." Then use the function str_locate_all() to find any numbers between 1 and 2, and any letters between a and b).
+
+```{r}
+sentence = c("This is a long sentence with 2 numbers with 1 digits.")
+ ### str_locate_all(sentence,"1-2","a-b") ~ this is a wrong interpretation. Remember that, **str_detect(strings2,"[ac]")** means detect any word that contains an "a" or a "c" in it. similarly, [1-2a-b]
+str_locate_all(sentence,"[1-2a-b]")
+```
+
+### This means that the character "a" was detected in the 9th position (the space in between words is counted as a character) and ended at the 9th position. The letter "2" was located in the 30th position. The letter "b" is located at point 35 and the number "1" is located in the 45th position of the document.
+
+### If you place a caret ˆ immediately inside the opening square bracket, it will make the regex match anything NOT inside the class. For example if you make the following regex [ˆac] it will match anything that isn't the letter "a" or "c".
+
+```{r}
+### For example 
+strings2 = c("a", "b", "c")
+str_detect(strings2,"[^ac]") # because the "^" sign is in front of the letter a, it will return "F", "T" and "F". 
+ # str_detect(strings2,"[a^c]") ~ output not understood. 
+```
+
+```{r}
+col = c("colour", "color", "farver")
+str_detect(col, "colou?r")
+```
+
+### we can detect any four-digit numbers using {4} to specify exactly n=4 times.
+
+```{r}
+sentences = c("The year was 1776.", "Alexander Hamilton died at 47.")
+str_extract(sentences, "\\d{4}")
+```
+
+### Deliverable 7: Understanding and Using the Regex Anchors. The meta characters ˆ and \$ are called "anchors" and have special meaning within regex, forcing the engine to check the beginning and end of a string respectively.
+
+```{r}
+### Create an object called seasons, with the following strings: “The summer is hot this year”,“The spring is a lovely time”,“Winter is my favorite time of the year”,“Fall is a time of peace”.
+
+seasons = c("The summer is hot this year","The spring is a lovely time","Winter is my favorite time of the year","Fall is a time of peace")
+
+
+### Now use str_detect to identify the sentences that start with “The”
+
+str_detect(seasons,"^The")
+
+### Now use str_detect to identify the sentences that end with “year”
+
+str_detect(seasons,"year$")
+
+
+### Create an object called folder_names containing the concatenated strings: “analysis”, “data-raw”, “data”, “R”
+folder_names = c("analysis", "data-raw", "data", "R")
+
+
+### Combine both anchors above to str_detect() folders with the name that both begins with the word data and ends with the word data.
+str_detect(folder_names,"^data$")
+```
+
+### Part 3: Web Scraping
+
+### Part 3, will explore webscraping in a progressively complicated series of R packages. We will begin with rvest, part of the tidyverse, and relatively easy to use. We include a use of the tm plugin for mail (tm.plugin.mail). Then we look at Rcrawler and RSelenium, two more advanced webscraping tools for R.
+
+### Reading html files into R and Manipulating with readr
+
+```{r}
+### Use the function read_html() to read an html link and create a variable/object called “weatherlink” 
+
+weatherlink = read_html("https://forecast.weather.gov/MapClick.php?lat=38.95604000000003&lon=-77.11782999999997#.XFozMs9KjUI")
+weatherlink
+
+### Use the html_nodes() function to create an object called “forecasthtml” made from a CSS “node”. In the argument of the html_nodes() function, add: “detailed-forecast-body b, .forecast-text”.
+
+forecasthtml = html_node(weatherlink, "detailed-forecast-body b, .forecast-text") # check secondary video
+forecasthtml
+
+### Use the html_text() function to create an object called “forecasttext” by reading in the html text from the CSS node identified by the object “forecasthtml”. Then, print out your forecast text. 
+
+forecasttext = html_text(forecasthtml)
+forecasttext
+
+### To make it more readable, collapse the sentences and then print out your forecast text as a paragraph. You will use the past() function with the forecasttext object in the argument, along with (, collapse = ” “) in the argument.
+
+paste(forecasttext,collapse = ",")
+
+```
+
+### Deliverable 9: Webscraping with Given CSS Fields
+
+```{r}
+### Create an object called starwars by using the read_html() function, and reading the following url: an HTML page into R with the read_html(): https://rvest.tidyverse.org/articles/starwars 
+
+starwars = read_html("https://rvest.tidyverse.org/articles/starwars")
+starwars
+
+### Now, create an object called films from the starwars object, by using the html_elements() function to find elements that match a css selector or XPath expression. In this example use the css element “section” in the argument for the html_elements() function. Then take a look at the films object.
+
+films = starwars %>% 
+  html_element("section") 
+
+films 
+```
+
+```{r}
+### Create an object called “title” made from the films object and then using the html_element() function to extract the “h2” css element from the object, and then wrap up by using the html_text2 function. Then review the title object. 
+
+title = films %>% 
+  html_element("h2") %>% 
+  html_text2()
+
+title
+```
+
+```{r}
+### Create an object called “episode” from the films object and then, use the html_element() function to ex- tract “h2”, and then use the html_attr() function to extract the “data-id” element, and then, use the parse_integer() function that needs to be called from within the readr package (remember to specifically call a function from within a specific function use the :: operator (e.g. readr:: and then add the specific function). The html_attr() function always returns a string so we convert it to an integer using a readr function. Then view the corresponding episode numbers from the films in your episode object.
+                                                                                                                                episode = films %>% 
+                                                                                                                                  html_element("h2") %>%
+                                                                                                                                  html_attr("data-id") %>% 
+                                                                                                                                  readr::parse_integer()
+                                                                                                                                episode                                                                                                                                                         
+```
+
+### Deliverable 10: Webscraping Tabular Data
+
+## Create an object called html containing a data frame of data from the following Lego Movie url by by using the read_html() function. After that, call the html object, and then use the html_element() function to extract the ".tracklist", and then use the html_table() function to store that data in a data frame.
+
+```{r}
+html = read_html("https://en.wikipedia.org/w/index.php?title=The_Lego_Movie&oldid=998422565")
+
+html %>% 
+  html_element(".tracklist") %>% 
+  html_table()
+```
