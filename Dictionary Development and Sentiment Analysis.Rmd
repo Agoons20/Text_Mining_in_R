@@ -1,0 +1,556 @@
+---
+title: "Dictionary Development and Sentiment Analysis"
+author: "DOAgoons"
+date: "2023-02-24"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### Lab 6: Categorization Models, Dictionaries, and Sentiment Analysis
+
+
+### Lab Overview
+
+Technical Learning Objectives
+• Understand the structure of a text mining categorization model aka dictionary.
+• Learn how to identify and use an existing dictionary to explore specific interests in your dataset. 
+• Learn how to build your own dictionary in tm, tidyverse, and quanteda.
+
+Business Learning Objectives
+• Understand the opportunities and challenges of using dictionaries.
+• Understand a popular application of dictionaries, known as sentiment analysis.
+• Understand the substantial advances made in the development and use dictionaries with the quanteda
+package.
+
+
+This lab will build our skills in deductive (confirmatory) approaches to analyzing your text. We will learn 
+*how to build and use categorization models, also known as dictionaries, to test your hypotheses and concepts, and 
+*how they can be used to conduct sentiment analysis.
+
+This lab focuses heavily on using the R ecosystem known as the Quantitative Analysis of Textual Data or quanteda. The development of quanteda was supported by the European Union, and it is a comprehensive approach to text mining in R, which rivals the tidyverse ecosystem using tidytext. You may decide to use tidyverse for textual analytics, tm or quanteda. 
+
+There are three main parts to the lab:
+• Part 1, will demonstrate a basic data preparation, text mining, and dictionary using tm.
+• Part 2, helps you to understand dictionary construction and focuses on a specific and popular application of a dictionary – sentiment analysis – using the tidyverse approach.
+• Part 3, will introduce you to a full text mining tutorial using quanteda, including its easy creation of document variables and use of dictionaries.
+
+In this lab, we will work with an existing dictionary file called *policy_agendas_english.lcd*, and a dataset called UN-data; this dataset is a folder, with specifically named subfolders, all containing .txt files. These .txt files are country speeches at the UN General Assembly.
+
+
+# Installing Packages, Importing and Exploring Data
+
+For this lab we will be working in the quanteda ecosystem, along with the tm package. We will install *quanteda* and these three related packages: quanteda.textmodels, quanteda.textstats, quanteda.textplots. If you find quanteda interesting, you may install the following packages from their GitHub site: quanteda.sentiment, quanteda.tidy. To install packages from a GitHub repo, you may use the following function:
+remotes::install_github(“quanteda/quanteda.sentiment”)
+Also, if haven’t already, please install: textdata, wordcloud, and readtext.
+```{r}
+#install.packages("quanteda")
+#install.packages("quanteda.textstats")
+#install.packages("quanteda.textplots")
+#install.packages("quanteda.textmodels")
+#install.packages("janeaustenr")
+
+# For quanteda, we install the following packages
+#remotes::install_github("quanteda/quanteda.sentiment")
+#remotes::install_github("quanteda/quanteda.tidy")
+#install.packages("textdata")
+#install.packages("wordcloud")
+#install.packages("readtext")
+
+
+library(quanteda)
+library(quanteda.textmodels)
+library(quanteda.textplots)
+library(quanteda.textstats)
+library(quanteda.sentiment)
+library(quanteda.tidy)
+library(textdata)
+library(wordcloud)
+library(readtext)
+
+library(tm)
+library(tidyverse)
+library(tidytext)
+library(reshape2)
+library(janeaustenr)
+library(dplyr)
+```
+
+NB: Please note, loading the packages in this order leads to the stopwords dictionary from the tm package to be masked by quanteda. So, when we want to call that library remember we need to include a reference to the tm package, such as tm::stopwords. ALWAYS READ THE OUTPUT OF LOADED PACKAGES. 
+
+## Part 1: Data Preparation, Text Mining and Dictionary Develop- ment in tm
+
+Deliverable 1: Get your working directory and paste below:
+```{r}
+getwd()
+```
+
+Deliverable 2: Create Files For Use from Reuters
+NB: There is a dataset built into BaseR called reuters. From this dataset lets pull some text files to use as our initial data. Create an object called reut21578 and use the system.file() function, with the following argument: (“texts”,“crude”, package = “tm”)
+
+```{r}
+reut21578 = system.file("texts","crude", package = "tm")
+#getSources()
+#getReaders()
+```
+
+Deliverable 3: Create VCorpus Object
+```{r}
+reuters = VCorpus(DirSource(reut21578,mode = "binary"), readerControl = list(reader=readReut21578XMLasPlain))
+class(reuters)
+
+## Now, lets inspect the 2nd documents in this corpus. The 2nd document contains 16 meta data which better help understand the documents in the cor
+
+# inspect(reuters[2])
+
+# meta(reuters[[2]])
+
+## examine content of document 2. Looking at this document, there is need for stop word elimination. 
+content(reuters[[2]])
+```
+
+Deliverable 4: Prepare and Preprocess the Corpus
+
+Now we will transform our corpus, that is, *stripping out the whitespace*, *then transforming the text to lowercase*, and *then removing the stopwords*.
+
+Eliminating Extra Whitespace
+Extra whitespace is eliminated by:
+```{r}
+tm_map(reuters, stripWhitespace)
+
+## Inspect document 2 again 
+content(reuters[[2]])
+```
+
+Convert to Lower Case
+Conversion to lower case by:
+```{r}
+reuters <- tm_map(reuters, content_transformer(tolower))
+
+## Inspect document 2 again 
+content(reuters[[2]])
+```
+Remove Stopwords
+```{r}
+reuters <- tm_map(reuters, removeWords, stopwords("english"))
+
+## Inspect document 2 again 
+content(reuters[[2]])
+```
+
+```{r}
+myStopwords = c(tm::stopwords()," ") 
+tdm3 = TermDocumentMatrix(reuters, 
+                          control = list(weighting = weightTfIdf, 
+                                         stopwords = myStopwords, 
+                                         removePunctuation = T, 
+                                         removeNumbers = T, 
+                                         stemming = T))
+
+## Inspect document 2 again 
+# content(reuters[[2]])
+```
+
+Deliverable 5: Create Document Term Matrix with TF and TF*IDF
+```{r}
+dtm <- DocumentTermMatrix(reuters)
+inspect(dtm)
+```
+DTM are very important. A huge amount of R functions (like clustering, classifications, etc.) can be applied to it. 
+
+================ CNTN here... 
+there is a helpful alternative weighting to explore, which is the term frequency by inverted document frequency (TF*IDF). 
+
+Create a TFD by inverted document frequency
+```{r}
+# dtm2 = DocumentTermMatrix(reuters, control = list(weighting = TfIdf))
+
+dtm2 = weightTfIdf(dtm)
+
+findFreqTerms(dtm2, 5)
+```
+
+Deliverable 6: Find the Most Frequent Terms
+```{r}
+findFreqTerms(dtm, 5)
+```
+
+
+Deliverable 7: find associations (i.e., terms which *correlate*) with at least 0.8 correlation for the term "opec"
+```{r}
+findAssocs(dtm, "opec", 0.8)
+```
+THere are 8 terms which are highly correlated with the word Opec in this corpus. Oil seems to be an important word which was picked up because opec makes rule on drillings
+
+Term-document matrices tend to get very big already for normal sized data sets. Therefore we provide a method to *remove sparse terms, i.e., terms occurring only in very few documents*. Normally, this reduces the matrix dramatically without losing significant relations inherent to the matrix:
+
+Deliverable 8: Remove Sparse Termss
+```{r}
+removeSparseTerms(dtm, 0.4)
+inspect(removeSparseTerms(dtm, 0.4))
+```
+
+Deliverable 9: Develop a Simple Dictionary in tm
+
+A dictionary is a (multi-)set of strings. It is often used to denote relevant terms in text mining. We represent a
+dictionary with a character vector which may be passed to the DocumentTermMatrix() constructor as a control
+argument. Then the created matrix is tabulated against the dictionary, i.e., only terms from the dictionary
+appear in the matrix. This allows to restrict the dimension of the matrix a priori and to focus on specific terms
+for distinct text mining contexts
+
+The tm package is not the best ecosystem for developing dictionaries, but it does work. For example, let’s say the concept in which we are interested is crude oil prices. We can use the the argument, dictionary = c(“prices”, “crude”, “oil”) as part of the list() function, included in the use of the in- spect(DocumentTermMatrix) function where we inspect the reuters corpus. This would create the simple dictionary and apply that dictionary to the corpus. You will see which documents have what numbers of those three terms. You could then pull those three documents and explore them further.
+
+```{r}
+inspect(DocumentTermMatrix(reuters, list(dictionary = c("prices", "crude", "oil"))))
+```
+
+### Part 2: Understanding Tidyverse Dictionary Construction and Sentiment Analysis
+In Part 2, we will introduce you to dictionary development and use in the tidyverse ecosystem. The tidyverse is a more sophisticated way to approach dictionary construction, and a popular application of dictionaries in conducting a sentiment analysis. Of course, it will require the use of Tidy Data.
+We can use our understanding of the emotional intent of words to infer whether a section of text is positive or negative, or even more nuanced emotions like surprise or disgust. Let’s start by viewing the built-in sentiments dictionary from the tidytext package. The way dictionaries are constructed is you have categories, and then words associated with that category. In the case of sentiment dictionaries, you have the “categories” of sentiment, and then the words associated with that sentiment. Also, in this case, the sentiment dictionary is comprised of three “lexicons”: AFINN, Bing, and NRC) each with its own score or “weight” for the word if that lexicon has one. Below, call the sentiments object, then review its head, tail, and class.
+
+
+```{r}
+sentiments
+head(sentiments)
+tail(sentiments)
+class(sentiments)
+```
+
+Deliverable 10: Download Individual Lexicons within Sentiments
+```{r}
+get_sentiments("afinn")
+get_sentiments("bing")
+get_sentiments("nrc")
+```
+These results help you to visualize different ways dictionaries can be constructed, and how you can develop a customized dictionary. What are the key differences between how these three lexicons are constructed?
+afinn: 
+bing: 
+nrc:
+
+*Now, let’s return to the Jane Austen books and perform a specific type of sentiment analysis and identify how much “joy” is in the book Emma. We will do this by applying the “joy” elements from the nrc lexicon to the book of emma. This allows us to see the positive and “joyful” words in the book.*
+
+
+Deliverable 11: Create an object called tidy_books from the janeaustenr package
+
+```{r}
+library(janeaustenr)
+
+tidy_books <- austen_books() %>% 
+  group_by(book) %>% 
+  mutate(linenumber = row_number(), 
+         chapter = cumsum(str_detect(text, regex("ˆchapter [\\divxlc]",
+  ignore_case = TRUE)))) %>% 
+  ungroup() %>% unnest_tokens(word, text)
+```
+
+
+
+Deliverable 12: Create nrcjoy Sentiment Dictionary
+
+Create an object called nrcjoy by assigning it the results of the get_sentiments() function. In the argument, add “nrc” to select that library, and then %>% use the filter() function, with the sentiment == “joy” in the argument. This will create a nrcjoy dictionary made from the sentiment “Joy” in the nrc lexicon. Then explore the nrcjoy dictionary.
+
+```{r}
+nrcjoy = get_sentiments("nrc") %>% 
+  filter(sentiment == "joy")
+
+nrcjoy
+```
+
+Deliverable 13: Applying NRC Joy Extract to Emma
+Now, apply the nrcjoy extract from the nrc sentiment dictionary to the Emma book using the inner join function (similar to removing stop words with the anti-join function; but moving in the opposite direction)
+tidy_books %>% filter(book == “Emma”) %>% inner_join(nrcjoy) %>% count(word, sort = TRUE) The image on the right shows you the top ten “joyful” words in Emma.
+This result is interesting, but how does the book Emma compare to other books by Jane Austen on the specific sentiment of joy?
+```{r}
+tidy_books %>% 
+  filter(book == "Emma") %>% 
+  inner_join(nrcjoy) %>% count(word, sort = TRUE)
+```
+Deliverable 14: Sentiment Analysis of Jane Austen Books
+To determine the answer to this question, we will now create an object called janeaustensentiment and conduct a sentiment analysis of all the Jane Austen books. To do so, assign the janeaustensentiment object the results of the following, call tidy_books, and then, use the inner_join() function
+
+
+```{r}
+janeaustensentiment <- tidy_books %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(book, index = linenumber %/% 80, sentiment) %>% 
+  spread(sentiment, n, fill = 0) %>% 
+  mutate(sentiment = positive - negative) 
+
+janeaustensentiment
+```
+
+Deliverable 15: Visualize Jane Austen Sentiment
+Now we can visualize that sentiment analysis of the Jane Austen books using ggplot2. To begin, use the ggplot() function, and in the argument add the janeaustensentiment object, then add the following code to the rest of the argument:
+aes(index, sentiment, fill = book)) + geom_col(show.legend = FALSE) + facet_wrap(~book, ncol = 2, scales = “free_x”)
+```{r}
+ggplot(janeaustensentiment, aes(index, sentiment, fill = book)) + geom_col(show.legend = FALSE) + 
+  facet_wrap(~book, ncol = 2, scales = "free_x")
+```
+
+Deliverable 16: Calculate and Visualize Sentiment and Words
+Now we can calculate and visualize the overall positive v negative sentiment in the books, and see which words contributes to each. Since we still have a way to go on understanding the details of ggplot2 visualizaitons, I am going to provide you with the complete code below. However, I strongly encourage you to retype the code rather than cut and paste.
+
+```{r}
+bing_word_counts <- tidy_books %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, sort = TRUE) %>% 
+  ungroup()
+
+bing_word_counts
+
+
+bing_word_counts %>% 
+  group_by(sentiment) %>% 
+  top_n(10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word,n)) %>% 
+  ggplot(aes(word, n, fill = sentiment)) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~sentiment, scales = "free_y") + 
+  labs(y = "Contribution to sentiment", x = NULL) + 
+  coord_flip()
+```
+In the resulting image below, we notice that the word “miss” is listed as a “negative” word, which in the context of these books is not accurate. So, let’s take that word out of the dictionary.
+
+
+Deliverable 17: Create a Custom Stopword Dictionary
+Now, create and apply a custom stop word dictionary (or rather add a word “miss” to the dictionary) 
+```{r}
+custom_stop_words = bind_rows(tibble(word = c("miss"), lexicon = c("custom")), stop_words) 
+
+custom_stop_words
+```
+
+Deliverable 18: Apply Custom Stopword Dictionary
+Now apply the custom stopword dictionary and then re-run analysis and the visualization.
+```{r}
+bing_word_counts %>% 
+  anti_join(custom_stop_words) %>% 
+  group_by(sentiment) %>% top_n(10) %>% 
+  ungroup() %>% 
+  mutate(word = reorder(word, n)) %>% 
+  ggplot() + geom_col(aes(word, n, fill = sentiment), show.legend = F) +
+  labs(title = "Sentiment Analysis of Jane Austen’s Works", subtitle = "Separated by Sentiment", x = " ", y ="Contribution to Sentiment") +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5)) + 
+  scale_fill_brewer(palette = "Set1") + 
+  facet_wrap(~sentiment, scales = "free") + 
+  coord_flip()
+```
+
+Deliverable 19: Data Visualization with WordClouds
+Now, let’s look at the popular data visualization the WordCloud. You may encounter some warnings here.
+```{r}
+qq = tidy_books %>% 
+  anti_join(stop_words) %>% 
+  count(word) %>% with(wordcloud(word, n, max.words = 100))
+
+qq
+```
+And, we can reshape that visualization and add some indications of positive/negative values.
+
+```{r}
+tidy_books %>% 
+  inner_join(get_sentiments("bing")) %>% 
+  count(word, sentiment, sort = TRUE) %>% 
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>% 
+  comparison.cloud(colors = c("gray20","gray80"), max.words = 100)
+```
+
+Part 3: Text Mining with quanteda, Including Variable Creation and Dictionaries
+This section will focus on text mining in the quanteda ecosytem. This part will give you the final major leg of your text mining stool for this course.
+First, create an object called global_path containing a path to your UN General Assembly speech data. Remember, the path to the UN-data folder should be either a relative path if you are using the recommended project structure, or an absolute path to the folder.
+global_path <- “UN-data/”
+
+
+Deliverable 20: Create an Object for the UNGDSpeeches
+Now, use the readtext function to go through the subfolders, named for the date of the speech and create an object called UNGDspeeches containing the text of all the speeches. quanteda can create metadata for each document. The argument tells R to use the filename to find the document variables, and to create the variables: country, session, and year based on the structure of the filenemes. Notice the argument for the global path and help explain the regex.
+
+Importing a 
+```{r}
+global_path = "/Users/apple/Documents/MS Analytics ~ 2023/Semester 1 ~ Spring 2023/ITEC 724 ~ Big Data Analytics & Text Mining/LABS/Lab 6/UN-data/"
+
+library(readtext)
+UNGDspeeches = readtext(
+  paste0(global_path,"*/*.txt"), 
+docvarsfrom = "filenames", docvarnames = c("country","session","year"), 
+dvsep = "_", 
+encoding ="UTF-8"
+)
+
+UNGDspeeches
+
+```
+
+Note: 
+
+The global_path variable should be defined before running this code. It should point to the directory where the text files are stored.
+The paste0(global_path, "*/*.txt") argument specifies the file pattern to match. In this case, it will match all files with a .txt extension in all subdirectories of global_path.
+The docvarsfrom argument specifies the source of the document variables, which are additional metadata associated with each document. In this case, the filenames of the text files will be used as document variables.
+The docvarnames argument specifies the names of the document variables that will be created. In this case, three variables will be created: "country", "session", and "year".
+The dvsep argument specifies the delimiter used in the filenames to separate the document variables. In this case, the underscore character "_" is used.
+The encoding argument specifies the character encoding of the text files. In this case, "UTF-8" is used, which is a common encoding for text files.
+
+Deliverable 21: Generate a Corpus from UNGDspeeches
+
+Now, generate corpus from the UNGDspeeches object and then add unique identifiers to each document. 
+```{r}
+
+
+mycorpus = corpus(UNGDspeeches)
+
+# Assigns a unique identifier to each text
+
+docvars(mycorpus, "Textno") =
+  sprintf("%02d", 1:ndoc(mycorpus))
+
+mycorpus
+
+```
+
+Note: 
+- The docvars() function is used to assign metadata to the documents in a corpus. In this case, the metadata is a document variable called "Textno".
+- The sprintf() function is used to format the values of the "Textno" variable. In this case, the values are formatted as two-digit numbers with leading zeros, e.g., "01", "02", "03", etc.
+- The 1:ndoc(mycorpus) expression generates a sequence of numbers from 1 to the total number of documents in the corpus.
+= The "=" operator is used to assign the formatted values to the "Textno" variable for each document in the corpus
+
+Save statistics in “mycorpus.stats” mycorpus.stats <- summary(mycorpus) head(mycorpus.stats, n=10)
+
+```{r}
+# Save statistics in "mycorpus.stats"
+mycorpus.stats <- summary(mycorpus)
+
+# And print the statistics of the first 10 observations
+head(mycorpus.stats, n = 10)
+```
+
+Deliverable 22: Preprocess the Text
+Now, preprocess the text Create tokens
+
+```{r}
+# Preprocess the text
+
+# Create tokens
+token <-
+  tokens(
+    mycorpus,
+    split_hyphens = TRUE,
+    remove_numbers = TRUE,
+    remove_punct = TRUE,
+    remove_symbols = TRUE,
+    remove_url = TRUE,
+    include_docvars = TRUE
+  )
+```
+Notice the variable names that were created. What are the values for all eight variables for the country with the largest number of sentences in their speech?
+
+Since the pre-1994 documents were scanned with OCR scanners, several tokens with combinations of digits and characters were introduced. We clean them manually following this guideline.
+```{r}
+# Clean tokens created by OCR
+token_ungd <- tokens_select(
+  token,
+  c("[\\d-]", "[[:punct:]]", "^.{1,2}$"),
+  selection = "remove",
+  valuetype = "regex",
+  verbose = TRUE
+)
+```
+
+Deliverable 23: Tokenize the Dataset by N-Grams
+
+Now tokenize the dataset by n-grams; in this case finding all phrases 2-4 words in lenght using the tokens_ngrams() function. 
+```{r}
+toks_ngram <- tokens_ngrams(token, n = 2:4) 
+head(toks_ngram[[1]], 30)
+```
+
+Deliverable 24: Create a Document Feature Matrix
+
+Now create a Document Feature Matrix using the dfm() function (*the quanteda equivalent of a DTM*), preprocessing the corpus in the process.
+
+mydfm <- dfm(token_ungd, tolower = TRUE, stem = TRUE, remove = stopwords(“english”) )
+
+We lower and stem the words (tolower and stem) and remove common stop words (remove=stopwords()). Stopwords are words that appear in texts but do not give the text a substantial meaning (e.g., “the”, “a”, or “for”). Since the language of all documents is English, we only remove English stopwords here. quanteda can also deal with stopwords from other languages
+```{r}
+mydfm <- dfm(token_ungd,
+             tolower = TRUE,
+             stem = TRUE,
+             remove = stopwords("english")
+             )
+```
+
+Deliverable 25: Trim the DFM
+
+Now we can trim the text in the dfm. We are going to filter words that appear less than 7.5% and more than 90%. This approach works because we have a sufficiently large corpus. This is a conservative appraoch. 
+
+mydfm.trim <- dfm_trim( mydfm, min_docfreq = 0.075, max_docfreq = 0.90, docfreq_type = “prop” ) 
+
+```{r}
+mydfm.trim <-
+  dfm_trim(
+    mydfm,
+    min_docfreq = 0.075,
+    # min 7.5%
+    max_docfreq = 0.90,
+    #  max 90%
+    docfreq_type = "prop"
+  )
+
+# Now, let’s get a look at the DFM, by printing the first 5 observations and first 10 features: 
+
+head(dfm_sort(mydfm.trim, decreasing = TRUE, margin = "both"), 
+     n = 10, nf = 10)
+
+```
+Which country refers most to the economy in this snapshot of the data?
+
+Deliverable 26: Text Classification Using a Dictionary
+
+Text Classification using a dictionary (e.g. when categories are known in advance). This allows us to create lists of words that correspond to different categories. In this example, we will use the “LexiCoder Policy Agenda” dictionary.
+
+```{r}
+# load the dictionary with quanteda's built-in function
+dict <- dictionary(file = "policy_agendas_english.lcd")
+```
+
+Deliverable 27: Apply Dictionary
+
+Now we can apply the dictionary to filter the share of each country’s speeches on immigration, international affairs, and defense.
+mydfm.un <- dfm(mydfm.trim, dfm_groups = “country”, dictionary = dict)
+
+```{r}
+
+# This code doesn't eork. 
+mydfm.un <- dfm(mydfm.trim, dfm_groups = "country", dictionary = dict)
+
+
+
+un.topics.pa <- convert(mydfm.un, "data.frame") %>%
+  dplyr::rename(country = doc_id) %>%
+  select(country, immigration, intl_affairs, defence) %>%
+  tidyr::gather(immigration:defence, key = "Topic", value = "Share") %>%
+  group_by(country) %>%
+  mutate(Share = Share / sum(Share)) %>%
+  mutate(Topic = haven::as_factor(Topic))
+```
+
+Deliverable 28: Visualize the Results
+```{r}
+un.topics.pa %>%
+  ggplot(aes(country, Share, colour = Topic, fill = Topic)) +
+  geom_bar(stat = "identity") +
+  scale_colour_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Pastel1") +
+  ggtitle("Distribution of PA topics in the UN General Debate corpus") +
+  xlab("") +
+  ylab("Topic share (%)") +
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+```
+
+
