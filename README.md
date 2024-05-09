@@ -5,4 +5,4 @@ Summary of projects
 - Categorization Models, Dictionaries, and Sentiment Analysis
 - Predictive Analytics using text - Regression, Support Vector Machine
 - NLP - Parts of Speech Tagging
-- Unsupervised learning: Clustering 
+- Unsupervised learning: Clustering  
