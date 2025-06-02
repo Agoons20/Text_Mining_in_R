@@ -1,9 +1,9 @@
-### Analyzing Customer Satisfaction from Yelp Reviews (2009-2022) in STAR Format
+## Analyzing Customer Satisfaction from Yelp Reviews (2009-2022) in STAR Format
 
-#### Situation
+### Situation
 In the competitive, market-oriented business landscape, understanding customer satisfaction is critical for companies to thrive. The rise of online platforms like Yelp has generated vast amounts of user-generated review data, offering valuable insights into customer needs and preferences. Businesses face the challenge of analyzing this unstructured text data to identify key drivers of satisfaction and adapt to evolving customer expectations. 
 
-#### Task
+### Task
 Provide actionable insights for businesses to enhance customer satisfaction, loyalty, and profitability. This project leverages Yelp reviews from 2009 to 2022 to explore customer satisfaction trends across 16 U.S. states. The primary objectives of this project were twofold:
 
 i) To demonstrate the importance of quantitative text mining methods in decision-making and creating competitive advantages for businesses.
@@ -14,7 +14,7 @@ ii) To identify the drivers of customer satisfaction by analyzing Yelp reviews, 
 
 How frequently do words from Giese and Cote’s conceptual model of customer satisfaction appear in Yelp reviews?
 
-#### Action
+### Action
 To address the research questions, the following actions were taken using the Cross-Industry Standard Process for Data Mining (CRISP-DM) methodology. 
 <img width="391" alt="Screenshot 2025-06-02 at 2 36 13 AM" src="https://github.com/user-attachments/assets/c9c78813-4466-4741-9401-2f12874b43b4" />
 
@@ -40,7 +40,8 @@ Built a **corpus** (a corpus is a collection of text documents, like gathering a
 
 **Deployment:** Summarized findings and provided recommendations for businesses to improve service quality, food quality, and customer experience.
 
-#### Result
+
+### Result
 The analysis yielded the following key findings:
 
 **Research Q1 (Frequent Words):** The top 10 high-frequency words across Yelp reviews were “food,” “service,” “love,” “amazing,” “delicious,” “awesome,” “time,” “friendly,” “nice,” and “staff,” indicating a focus on food quality and service experience.
