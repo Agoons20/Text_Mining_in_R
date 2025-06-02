@@ -4,7 +4,9 @@
 In the competitive, market-oriented business landscape, understanding customer satisfaction is critical for companies to thrive. The rise of online platforms like Yelp has generated vast amounts of user-generated review data, offering valuable insights into customer needs and preferences. Businesses face the challenge of analyzing this unstructured text data to identify key drivers of satisfaction and adapt to evolving customer expectations. 
 
 ### Task
-Provide actionable insights for businesses to enhance customer satisfaction, loyalty, and profitability. This project leverages Yelp reviews from 2009 to 2022 to explore customer satisfaction trends across 16 U.S. states. The primary objectives of this project were twofold:
+Provide actionable insights for businesses to enhance customer satisfaction, loyalty, and profitability. This project leverages Yelp reviews from 2009 to 2022 to explore customer satisfaction trends across 16 U.S. states. Download the data from this link https://business.yelp.com/data/resources/open-dataset/ and choose the 4.35GB TAR file. 
+
+The primary objectives of this project were twofold:
 
 i) To demonstrate the importance of quantitative text mining methods in decision-making and creating competitive advantages for businesses.
 ii) To identify the drivers of customer satisfaction by analyzing Yelp reviews, answering four-- research questions:
@@ -16,6 +18,7 @@ How frequently do words from Giese and Cote’s conceptual model of customer sat
 
 ### Action
 To address the research questions, the following actions were taken using the Cross-Industry Standard Process for Data Mining (CRISP-DM) methodology. 
+
 <img width="391" alt="Screenshot 2025-06-02 at 2 36 13 AM" src="https://github.com/user-attachments/assets/c9c78813-4466-4741-9401-2f12874b43b4" />
 
 **Data Understanding:** Collected two JSON files (118.9 MB and 180.6 MB) from Yelp’s dataset, containing business details and customer reviews. These were merged using business identification keys, resulting in a dataset of 908,910 rows with 7 variables (business name, address, city, review text, state, postal code, and date). Due to processing constraints, a 10% random subset was used for this project.
