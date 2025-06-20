@@ -9,12 +9,12 @@ Provide actionable insights for businesses to enhance customer satisfaction, loy
 The primary objectives of this project were twofold:
 
 i) To demonstrate the importance of quantitative text mining methods in decision-making and creating competitive advantages for businesses.
-ii) To identify the drivers of customer satisfaction by analyzing Yelp reviews, answering four-- research questions:
+
+ii) To identify the drivers of customer satisfaction by analyzing Yelp reviews, answering four -- research questions:
 - What are the most frequently occurring words in Yelp customer reviews?
 - What are the most frequently occurring phrases in Yelp customer reviews?
 - Are there differences in Yelp reviews based on the state where the business is located?
-
-How frequently do words from Giese and Cote’s conceptual model of customer satisfaction appear in Yelp reviews?
+- How frequently do words from Giese and Cote’s conceptual model of customer satisfaction appear in Yelp reviews?
 
 ### Action
 To address the research questions, the following actions were taken using the Cross-Industry Standard Process for Data Mining (CRISP-DM) methodology. 
