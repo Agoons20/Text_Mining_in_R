@@ -2,7 +2,7 @@
 
 ### Situation
 In the competitive, market-oriented business landscape, understanding customer satisfaction is critical for companies to thrive. The rise of online platforms like Yelp has generated vast amounts of user-generated review data, offering valuable insights into customer needs and preferences. Businesses face the challenge of analyzing this unstructured text data to identify key drivers of satisfaction and adapt to evolving customer expectations. 
-
+ 
 ### Task
 Provide actionable insights for businesses to enhance customer satisfaction, loyalty, and profitability. This project leverages Yelp reviews from 2009 to 2022 to explore customer satisfaction trends across 16 U.S. states. Download the data from this link https://business.yelp.com/data/resources/open-dataset/ and choose the 4.35GB TAR file. 
 
