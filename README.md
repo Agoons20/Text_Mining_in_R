@@ -1,4 +1,4 @@
-## Analyzing Customer Satisfaction from Yelp Reviews (2009-2022) in STAR Format
+## Analyzing Customer Satisfaction from Yelp Reviews (2005-2022) in STAR Format
 
 ### Situation
 In the competitive, market-oriented business landscape, understanding customer satisfaction is critical for companies to thrive. The rise of online platforms like Yelp has generated vast amounts of user-generated review data, offering valuable insights into customer needs and preferences. Businesses face the challenge of analyzing this unstructured text data to identify key drivers of satisfaction and adapt to evolving customer expectations. 
@@ -69,5 +69,4 @@ The analysis yielded the following key findings:
 **Future Research:**
 - Conduct context analysis of keywords/phrases.
 - Ensure balanced representation of businesses across states.
-- Expand analysis to include the remaining 34 U.S. states.
 - This project successfully demonstrated the power of text mining in uncovering customer satisfaction drivers, providing businesses with data-driven strategies to enhance customer experiences and profitability.
